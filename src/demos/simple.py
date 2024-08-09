@@ -1,7 +1,3 @@
-if __name__ == '__main__':
-    import sys
-    sys.path.append('.')
-
 from src.main.hypergraph import HyperEdge, HyperGraph, HyperNode
 from src.relationships.math_rel import *
 from src.main.hypergraph import Router
