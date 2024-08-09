@@ -6,6 +6,24 @@ from src.main.hypergraph import HyperEdge, HyperGraph, HyperNode
 from src.relationships.math_rel import *
 
 def main():
+    hg = makePendulumHG()
+    omega, alpha, r, theta = hg.getNodes(['omega', 'alpha', 'r', 'theta'])
+
+    router = hg.router(theta, alpha)
+    route = router.getShortestRoute()
+    router.supplement([r], route)
+    print(route)
+
+    ics = dict(
+        omega = 1.0,
+        theta = 0.0,
+        c = 1.0,
+        g = 9.81,
+        r = 1.0,
+    )
+    route.simulate(ics, toPrint=True)
+
+def makePendulumHG():
     g = HyperNode('g', 9.81)
     theta, omega, alpha = HyperNode.initMany(['theta','omega', 'alpha'])
     r, c, stheta = HyperNode.initMany(['r', 'c', 'stheta'])
@@ -21,13 +39,7 @@ def main():
     hg += HyperEdge(beta3, alpha, equal_rel)
     hg += HyperEdge([beta3, beta5], alpha, plus_rel)
 
-    router = hg.router(theta, alpha)
-    route = router.getShortestRoute()
-    router.supplement(r, route)
-    print(route.getInputs(toString=True))
-    # route = router.getRoute([g, theta, r])
-    print(route)
-    route([0, 9.81, 1.0], toPrint=True)
+    return hg
 
 if __name__ == '__main__':
     main()

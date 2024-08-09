@@ -143,6 +143,17 @@ class HyperGraph:
         out += '\n\t'.join([str(e) for e in self.edges])
         return out
     
+    def getNode(self, label: str)-> HyperNode:
+        """Returns the node in the hypergraph with the given label."""
+        for node in self.nodes:
+            if node.label == label:
+                return node
+        return None
+    
+    def getNodes(self, labels: list)-> list:
+        """Returns a list of nodes from the hypergraph with the given labels."""
+        return [self.getNode(l) for l in labels]
+    
     def getRoutes(self, start_node: HyperNode, end_node: HyperNode):
         """Returns all possible simulations between the given nodes."""
         return self.router(start_node, end_node).routes
@@ -201,7 +212,10 @@ class Route:
         return self.simulate(ics, toPrint)
     
     def __str__(self):
-        return f'Route:\n  ' + '\n  '.join([str(s.edge) for s in self.steps])
+        out = 'Route:\n  '
+        out += self.getInputs(toString=True) + '\n  '
+        out += '\n  '.join([str(s.edge) for s in self.steps])
+        return out
         
     def addStep(self, next_node: HyperNode, edge: HyperEdge):
         """Adds a step to the route """
@@ -257,17 +271,30 @@ class Route:
                 if node not in self.input_nodes and node not in to_nodes:
                     self.input_nodes.append(node)
 
-    def simulate(self, ics: list=None, toPrint: bool=False):
+    def simulate(self, initial_conditions=None, toPrint: bool=False):
         """Simulates the route, returning the value of the end node."""
         if toPrint:
             print("Simulation:")
-        if ics is not None:
-            self.findInputs()
-            for node, ic in zip(self.input_nodes, ics):
-                node.value = ic
+        if initial_conditions is not None:
+            self.setNodeValues(initial_conditions)
         for step in self.steps:
             step.step(toPrint=toPrint)
         return self.steps[-1].next_node.value
+    
+    def setNodeValues(self, values=None):
+        """Sets the values of the given nodes. If values is a dict then each
+        keyword must be a node label. If `values` is a list then it is paired
+        with the class input nodes."""
+        self.findInputs()
+        if isinstance(values, dict):
+            for key, val in values.items():
+                for node in self.input_nodes:
+                    if node.label == key:
+                        node.value = val
+                        break
+        else:
+            for node, ic in zip(self.input_nodes, values):
+                node.value = ic
 
 class Router:
     def __init__(self, hg: HyperGraph, root: HyperNode, destination: HyperNode):
@@ -291,20 +318,14 @@ class Router:
     
     def routeStep(self, this_node: HyperNode, this_edge: HyperEdge, path: list):
         """Recursive step for building a route."""
-        #TODO: This step is altering the previous routes
         path.append(Route.RouteStep(this_node, this_edge))
 
-
-        # Reached destination
         if this_node == self.end:
             route = Route([step for step in path])
             self.routes.append(route)
             return
         
-        # Explore next node
         self.exploreNextNode(this_node, path)
-        
-        # Found no path from current node
         return 
     
     def exploreNextNode(self, this_node: HyperNode, path: list):
@@ -315,7 +336,7 @@ class Router:
                 if next_node in self.unexplored_nodes:
                     self.routeStep(next_node, next_edge, path)
 
-    def getShortestRoute(self, routes: list=None):
+    def getShortestRoute(self, routes: list=None)-> Route:
         """Returns the most direct route (as counted by number of edges to traverse)."""
         if routes is None:
             routes = self.routes
@@ -337,7 +358,7 @@ class Router:
         return route
     
     def supplement(self, nodes: list, route: Route):
-        """Adds the shortest path that reaches the given nodes to the route 
+        """Adds the shortest path that adds the given nodes to the route 
         (if possible)."""
         if not isinstance(nodes, list):
             nodes = [nodes]
@@ -359,4 +380,3 @@ class Router:
                 found_routes.append(route)
         return self.getShortestRoute(found_routes)
             
-    
