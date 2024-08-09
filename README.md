@@ -11,44 +11,44 @@ Let's build a basic action hypergraph of the following equations:
 
 First, import the classes. 
 ```[python]
-    from src.main.hypergraph import *
-    from src.relationships.math_rel import *
+from src.main.hypergraph import *
+from src.relationships.math_rel import *
 ```
 
 Second, form the nodes using a builder function. Every node needs a string label:
 ```[python]
-    A, B, C, D, E, F = HyperNode.initMany(['A', 'B', 'C', 'D', 'E', 'F])
+A, B, C, D, E, F = HyperNode.initMany(['A', 'B', 'C', 'D', 'E', 'F])
 ```
 
 To make the hypergraph we'll need to compose the 5 edges (equations) given above:
 ```[python]
-    hg = HyperGraph()
-    hg += HyperEdge([A, B], C, plus_rel)
-    hg += HyperEdge(A, D, inverse_rel)
-    hg += HyperEdge(E, B, inverse_rel)
-    hg += HyperEdge([D, E], F, plus_rel)
-    hg += HyperEdge(F, C, inverse_rel)
+hg = HyperGraph()
+hg += HyperEdge([A, B], C, plus_rel)
+hg += HyperEdge(A, D, inverse_rel)
+hg += HyperEdge(E, B, inverse_rel)
+hg += HyperEdge([D, E], F, plus_rel)
+hg += HyperEdge(F, C, inverse_rel)
 ```
 
 Now we can simulate it! Choose inputs, such as $A$ and $B$, and find a route to simulate $C$. 
 ```[python]
-    initial_conditions = dict(
-        A = 3,
-        B = 7,
-        E = -7,
-    )
-    hg.sim([A, B], C, initial_conditions, toPrint=True)
-    hg.sim([A, E], C, initial_conditions, toPrint=True)
+initial_conditions = dict(
+    A = 3,
+    B = 7,
+    E = -7,
+)
+hg.sim([A, B], C, initial_conditions, toPrint=True)
+hg.sim([A, E], C, initial_conditions, toPrint=True)
 ```
 
 The output of the above should be:
 ```
-    Simulation:
-      plus: [A(3), B(7)] -> [C(10)]
-    Simulation:
-      inverse: [A(3)] -> [D(-3)]
-      plus: [D(-3), E(-7)] -> [F(-10)]
-      inverse: [F(-10)] -> [C(10)]
+Simulation:
+  plus: [A(3), B(7)] -> [C(10)]
+Simulation:
+  inverse: [A(3)] -> [D(-3)]
+  plus: [D(-3), E(-7)] -> [F(-10)]
+  inverse: [F(-10)] -> [C(10)]
 ```
 
 Check out the  [demos](https://github.com/jmorris335/ActionHypergraphs/tree/main/src/demos) directory for more examples.
