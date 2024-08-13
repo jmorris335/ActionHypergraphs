@@ -1,14 +1,13 @@
-from src.main.hypergraph import HyperEdge, HyperGraph, HyperNode
+from src.main.hypergraph import Hypergraph
+from src.main.traversing import Pathfinder, Simulator
 from src.relationships.math_rel import *
 
 def main():
     hg = makePendulumHG()
-    omega, alpha, r, theta = hg.getNodes(['omega', 'alpha', 'r', 'theta'])
 
-    router = hg.router(theta, alpha)
-    route = router.getShortestRoute()
-    router.supplement([r], route)
-    print(route)
+    pf = Pathfinder(hg, ['omega', 'theta', 'g', 'r', 'c'])
+    print(pf)
+    print(pf.printPath('alpha'))
 
     ics = dict(
         omega = 1.0,
@@ -17,23 +16,19 @@ def main():
         g = 9.81,
         r = 1.0,
     )
-    route.simulate(ics, toPrint=True)
+    sim = Simulator(pf, 'alpha', ics)
+    print(sim)
 
 def makePendulumHG():
-    g = HyperNode('g', 9.81)
-    theta, omega, alpha = HyperNode.initMany(['theta','omega', 'alpha'])
-    r, c, stheta = HyperNode.initMany(['r', 'c', 'stheta'])
-    beta1, beta2, beta3, beta4, beta5 = HyperNode.initMany([ 'b1', 'b2', 'b3', 'b4', 'b5'])
-
-    hg = HyperGraph()
-    hg += HyperEdge([omega, c], beta2, mult_rel)
-    hg += HyperEdge(beta2, beta5, negate_rel)
-    hg += HyperEdge([g, r], beta1, division_rel)
-    hg += HyperEdge(theta, stheta, sin_rel)
-    hg += HyperEdge(beta1, beta4, negate_rel)
-    hg += HyperEdge([beta4, stheta], beta3, mult_rel)
-    hg += HyperEdge(beta3, alpha, equal_rel)
-    hg += HyperEdge([beta3, beta5], alpha, plus_rel)
+    hg = Hypergraph()
+    hg.addEdge(['omega', 'c'], 'beta2', rel=mult_rel)
+    hg.addEdge(['beta2'], 'beta5', rel=negate_rel)
+    hg.addEdge(['g', 'r'], 'beta1', rel=division_rel)
+    hg.addEdge(['theta'], 'stheta', rel=sin_rel)
+    hg.addEdge('beta1', 'beta4', rel=negate_rel)
+    hg.addEdge(['beta4', 'stheta'], 'beta3', rel=mult_rel)
+    hg.addEdge('beta3', 'alpha', 100, rel=equal_rel)
+    hg.addEdge(['beta3', 'beta5'], 'alpha', rel=plus_rel)
 
     return hg
 

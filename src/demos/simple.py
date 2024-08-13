@@ -1,32 +1,27 @@
-from src.main.hypergraph import HyperEdge, HyperGraph, HyperNode
+from src.main.hypergraph import Hypergraph
 from src.relationships.math_rel import *
-from src.main.hypergraph import Router
+from src.main.traversing import Pathfinder, Simulator
 
 def main():
-    hg = HyperGraph()
-    A = HyperNode('A')
-    B = HyperNode('B')
-    C = HyperNode('C')
-    D = HyperNode('D')
-    E = HyperNode('E')
-    F = HyperNode('F')
-    
-    hg += HyperEdge([A, F, B], [E], plus_rel)
-    hg += HyperEdge(A, F, increment_rel)
-    hg += HyperEdge(A, D, increment_rel)
-    hg += HyperEdge(D, C, increment_rel)
-    hg += HyperEdge(E, C, increment_rel)
+    hg = Hypergraph()
+    hg.addEdge(['A', 'B'], 'E', rel=plus_rel)
+    hg.addEdge(['C', 'D'], 'F', 20, rel=plus_rel)
+    hg.addEdge(['B', 'C'], 'E', rel=plus_rel)
+    hg.addEdge(['B', 'D'], 'F', rel=plus_rel)
+    hg.addEdge(['E', 'F'], 'T', rel=plus_rel)
 
-    router = Router(hg, A, C)
-    route = router.routes[0]
-    print(f"Inputs: [" + ", ".join([str(node) for node in route.getInputs()]) + "]")
-    sim_val = route([5, 6, 10], toPrint=True)
+    pf = Pathfinder(hg, ['A', 'B', 'C', 'D'])
+    # print(pf)
+    print(pf.printPath('T'))
 
-    print(route)
-
-    reduced_route = router.reduce(route)
-    print(reduced_route)
-    reduced_route([5, 10], toPrint=True)
+    ics = dict(
+        A = 1,
+        B = 10,
+        C = -3,
+        D = 3,
+    )
+    sim = Simulator(pf, 'T', ics)
+    print(sim)
 
 if __name__ == '__main__':
     main()

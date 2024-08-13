@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.main.hypergraph2 import Relationship
+from src.main.hypergraph import Relationship
 
 class RelMethods:
     def product(values):

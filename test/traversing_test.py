@@ -1,14 +1,14 @@
-from src.main.hypergraph2 import *
+from src.main.hypergraph import *
 from src.main.traversing import Pathfinder, Simulator
+from src.relationships.math_rel import *
 
 def main():
-    plus = Relationship("plus#rel", lambda l : sum(l))
     hg = Hypergraph()
-    hg.addEdge(['A', 'B'], 'E', rel=plus)
-    hg.addEdge(['C', 'D'], 'F', 20, rel=plus)
-    hg.addEdge(['B', 'C'], 'E', rel=plus)
-    hg.addEdge(['B', 'D'], 'F', rel=plus)
-    hg.addEdge(['E', 'F'], 'T', rel=plus)
+    hg.addEdge(['A', 'B'], 'E', rel=plus_rel)
+    hg.addEdge(['C', 'D'], 'F', 20, rel=plus_rel)
+    hg.addEdge(['B', 'C'], 'E', rel=plus_rel)
+    hg.addEdge(['B', 'D'], 'F', rel=plus_rel)
+    hg.addEdge(['E', 'F'], 'T', rel=plus_rel)
 
     pf = Pathfinder(hg, ['A', 'B', 'C', 'D'])
     # print(pf)

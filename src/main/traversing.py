@@ -13,7 +13,7 @@ Version History:
     - 0.0 [13 Aug 2024]: Initial version
 """
 
-from src.main.hypergraph2 import Node, Edge, Hypergraph
+from src.main.hypergraph import Node, Edge, Hypergraph
 
 class Pathfinder:
     """Object for finding the FD graph closure of a `Hypergraph`, as well as 
