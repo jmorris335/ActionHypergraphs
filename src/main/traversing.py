@@ -3,8 +3,26 @@ import numpy as np
 
 class Pathfinder:
     def __init__(self, hg: Hypergraph, source: list):
+        """
+        Finds the FD graph closure in the `Hypergraph` for the given source node(s).
+
+        Parameters
+        ----------
+        hg : Hypergraph
+            The `Hypergraph` object to compute the closure over.
+        source : list | Node | str
+            The nodes that act as the source set for the path (and for which closure
+            is computed). Can be a list of `Node` objects or list of strings, 
+            where each string references the label of a `Node` in the `Hypergraph`.
+            Can also be a singular `Node` or string with equivalent meaning.
+        """
         self.hg = hg
-        self.source = source if isinstance(source, Node) else self.makeSourceSet(source)
+        if not isinstance(source, list):
+            source = [source]
+        for i, node in enumerate(source):
+            if isinstance(node, str):
+                source[i] = hg.getNode(node)
+        self.source = source[0] if len(source)==0 else self.makeSourceSet(source)
 
         self.initializeData()
         self.p_queue = [(0.0, Edge(self.source, self.source, 0.0))]
@@ -125,6 +143,8 @@ class Pathfinder:
         Prints the minimum hyperpath taken from the hypergraph closure from the 
         source to the `target` node.
         """
+        if isinstance(target, str):
+            target = self.hg.getNode(target)
         path = self.getPath(target)
         if path is None:
             return f"No viable path to {target}"
