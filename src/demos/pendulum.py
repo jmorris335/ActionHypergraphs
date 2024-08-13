@@ -27,10 +27,10 @@ def makePendulumHG():
 
     hg = HyperGraph()
     hg += HyperEdge([omega, c], beta2, mult_rel)
-    hg += HyperEdge(beta2, beta5, inverse_rel)
+    hg += HyperEdge(beta2, beta5, negate_rel)
     hg += HyperEdge([g, r], beta1, division_rel)
     hg += HyperEdge(theta, stheta, sin_rel)
-    hg += HyperEdge(beta1, beta4, inverse_rel)
+    hg += HyperEdge(beta1, beta4, negate_rel)
     hg += HyperEdge([beta4, stheta], beta3, mult_rel)
     hg += HyperEdge(beta3, alpha, equal_rel)
     hg += HyperEdge([beta3, beta5], alpha, plus_rel)

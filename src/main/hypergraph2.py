@@ -257,7 +257,7 @@ class Hypergraph:
             The weight of the given edge. If the target of the edge is compound 
             (or a new hyperedge is requested) then the weight is set to be 0.
         """
-        if isinstance(source, Node):
+        if not isinstance(source, list):
             source = [source]
         for i, node in enumerate(source):
             if isinstance(node, str):
