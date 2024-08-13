@@ -86,15 +86,18 @@ class Pathfinder:
             return self.DIST[node.label]
         self.DIST[node.label] = set_value
     
-    def last(self, node: Node, set_node: Node=None):
+    def last(self, node: Node, set_edge: Edge=None, get_edge: bool=False):
         """Helper method to retrieve or set the LAST variable, which stores the
-        node in the FD chart that leads to the given node in the optimized path.
+        edge in the FD chart that leads to the given node in the optimized path.
+        If called, the function returns the source node in the edge (unless 
+        `get_edge` is specified.)
         """
-        if set_node == "None":
+        if set_edge == "None":
             self.LAST[node.label] = None
-        elif set_node is None:
-            return self.LAST[node.label]
-        self.LAST[node.label] = set_node
+        elif set_edge is None:
+            edge = self.LAST[node.label]
+            return edge if get_edge else edge.source
+        self.LAST[node.label] = set_edge
     
     def findInQueue(self, node: Node)-> tuple:
         """Returns the element in the priority queue with the given target node."""
@@ -145,7 +148,7 @@ class Pathfinder:
             D, curr_edge = self.getMinQueueEl()
             s, t = curr_edge.source, curr_edge.target
             self.dist(t, D)
-            self.last(t, s)
+            self.last(t, curr_edge)
             for edge in t.full_edges:
                 self.scan(edge)
             for edge in t.dotted_edges:
@@ -187,7 +190,7 @@ class Pathfinder:
         reversed = path[::-1]
         return reversed
     
-    def printPath(self, target: Node)-> str:
+    def printPath(self, target: Node, withValue: bool=False)-> str:
         """ Prints the minimum hyperpath taken from the hypergraph closure from 
         the source to the `target` node."""
         if isinstance(target, str):
@@ -201,41 +204,64 @@ class Pathfinder:
         num_cols = sum([len(n.dependencies) for n in cmpnd]) + 1
         blank = f'{' ':<{col_width}}'
         out_array = [[blank for i in range(num_cols)] for j in range(num_rows)]
-        self.printPathHelper(target, out_array, col_width, 0, 0)
+        self.printPathHelper(target, out_array, col_width, 0, 0, withValue)
         out = '\n'.join([''.join([col for col in row]) for row in out_array])
         return out
 
-    def printPathHelper(self, node: Node, out: list, width: int, row: int, col: int):
+    def printPathHelper(self, node: Node, out: list, width: int, row: int, col: int,
+                        withValue: bool=False):
         """Recursive helper method for the `printPath` method."""
-        self.printNode(node, out, row, col, width)
+        self.printNode(node, out, row, col, width, withValue)
         if node == self.source:
             return
         row += 1
-        if  node.isSimple():
-            self.printLeader(out, row, col, width)
-            self.printPathHelper(self.last(node), out, width, row + 1, col)
+        if node.isSimple():
+            edge = self.last(node, get_edge=True)
+            rel_str = self.getRelString(edge, width) if withValue else None
+            self.printLeader(out, row, col, width, withValue=rel_str)
+            self.printPathHelper(edge.source, out, width, row + 1, col, withValue)
         else:
+            rel_str = self.getRelString(node.full_edges[0], width) if withValue else None
             for i, parent in enumerate(node.dependencies):
-                self.printLeader(out, row, col, width, isSlant=(i != 0))
-                self.printPathHelper(parent, out, width, row + 1, col)
+                self.printLeader(out, row, col, width, isSlant=(i != 0), withValue=rel_str)
+                self.printPathHelper(parent, out, width, row + 1, col, withValue)
                 path = self.getPath(parent)
                 cmpnd = [n for n in path if not n.isSimple()]
                 num_cols = max(1, sum([len(n.dependencies) for n in cmpnd]))
                 col += num_cols
+
+    def getRelString(self, edge: Edge, width: int):
+        """Gets the leader string for the relationship."""
+        out = str(edge.rel).split('#')[0]
+        out = list(out)[:width-2]
+        out = ''.join(out)
+        return out
         
-    def printNode(self, node: Node, out: list, row: int, col: int, width: int):
+    def printNode(self, node: Node, out: list, row: int, col: int, width: int, 
+                  withValue: bool=False):
         """Helper function for printing `Node` labels with a specified formatting
         and spacing. Called by `printPath`."""
         label = list(node.label[:width-2])
         if len(node.label) > width - 2:
             label[-1] = '-'
+        if withValue:
+            val = node.value
+            prefix = 3
+            num_chars = min(len(str(val)), width - prefix - 2)
+            last_idx = num_chars + prefix
+            if isinstance(val, float):
+                label[prefix:last_idx] = f':{val:.{num_chars}}'
+            else:
+                val_str = str(val)[:num_chars]
+                label[prefix:last_idx] = f':{val_str}'
         label = ''.join(label)
         out[row][col] = f'{label: ^{width}}'
 
-    def printLeader(self, out: list, row: int, col: int, width: int, isSlant: bool=False):
+    def printLeader(self, out: list, row: int, col: int, width: int, 
+                    isSlant: bool=False, withValue: str=None):
         """Helper function for printing leaders (arrows) with a specified formatting
         and spacing. Called by `printPath`."""
-        leader = '↘' if isSlant else "↓"
+        leader = withValue if withValue is not None else "↘" if isSlant else "↓"
         if isSlant:
             num_leading_spaces = (width - 1) // 2 - 1
             leading_spaces = ''.join([' ' for i in range(num_leading_spaces)])
@@ -263,6 +289,52 @@ class Pathfinder:
             sub_lengths = [self.maxBranchLength(p, num_rows) for p in parents]
             return max(sub_lengths)
 
+class Simulator:
+    def __init__(self, pf: Pathfinder, target: Node, input_values: dict):
+        self.pf = pf
+        self.out_str = list()
+        self.simulate(target, input_values)
+
+    def simulate(self, target: Node, input_values: dict, input_nodes: list=None):
+        if isinstance(target, str):
+            target = self.pf.hg.getNode(target)
+        self.target = target
+        self.pf.hg.setNodeValues(input_values, input_nodes)
+        if input_nodes is None:
+            input_nodes = [self.pf.hg.getNode(label) for label in input_values.keys()]
+        self.input_nodes = input_nodes
+        if isinstance(target, str):
+            target = self.pf.hg.getNode(target)
+        return self.simulationHelper(target, input_nodes)
+    
+    def simulationHelper(self, node, inputs: list):
+        if node in inputs:
+            return node.value
+        edge = self.pf.last(node, get_edge=True)
+        rel, source = edge.rel, edge.source
+        if source.isSimple():
+            val = rel(self.simulationHelper(source, inputs))
+        else:
+            values = [self.simulationHelper(parent, inputs) for parent in source.dependencies]
+            val = edge.rel(values)
+        node.value = val
+        self.out_str.append(str(edge))
+        return val
+    
+    def printSimTree(self)-> str:
+        return self.pf.printPath(self.target, withValue=True)
+    
+    def __str__(self):
+        nodes = self.pf.getPath(self.target)
+        input_str = ', '.join([f'{n.label}:{n.value}' for n in self.input_nodes])
+        out = '**Simulation**\n'
+        out += 'Inputs: ' + input_str + '\n'
+        out += 'Steps:\n  '
+        out += '\n  '.join(self.out_str)
+        return out
+        
+    
+            
 if __name__ == '__main__':
     A, B, C, D = Node('A'), Node('B'), Node('C'), Node('D')
     E, F, G, H = Node('E'), Node('F'), Node('G'), Node('H')
