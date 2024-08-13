@@ -1,3 +1,3 @@
-from src.demos.pendulum import main
+from test.traversing_test import main
 
 main()

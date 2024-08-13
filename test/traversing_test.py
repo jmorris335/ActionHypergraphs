@@ -8,7 +8,6 @@ def main():
     hg.addEdge(['B', 'C'], 'E')
     hg.addEdge(['B', 'D'], 'F')
     hg.addEdge(['E', 'F'], 'T')
-    print(hg)
 
     pf = Pathfinder(hg, ['A', 'B', 'C', 'D'])
     print(pf)

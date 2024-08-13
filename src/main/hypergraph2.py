@@ -1,6 +1,20 @@
+"""
+Program: hypergraph.py
+Author: John Morris, jhmrrs@clemson.edu
+Organization: The PLM Center at Clemson University
+Purpose: Provide class objects for representing actionable hypergraphs.
+Usage: All rights reserved.
+Version History:
+    - 0.0 [13 Aug 2024]: Initial version
+"""
+
+class Relationship:
+    """A mapping between a set of `Nodes` and another `Node`."""
+    def __init__(self):
+        pass
+
 class Edge:
-    """An edge in a hypergraph, which maps two `Nodes`.
-    """
+    """An edge in a FD graph, which links two `Nodes`."""
     def __init__(self, source, target, weight: float=1.0):
         self.source = source
         self.target = target
