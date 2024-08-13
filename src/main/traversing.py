@@ -1,7 +1,25 @@
-from src.main.hypergraph2 import *
-import numpy as np
+"""
+Program: traversing.py
+Author: John Morris, jhmrrs@clemson.edu
+Organization: The PLM Center at Clemson University
+Purpose: Provide class objects for traversing actionable hypergraphs.
+Usage: All rights reserved.
+Credits: Primary algorithms derived by G. Ausiello, R. Giaccio, G. Italiano, 
+    and U. Nanni, “Optimal Traversal of Directed Hypergraphs,” International 
+    Computer Science Institute, Berkeley, CA, ICSI Technical Report ICSI 
+    TR-92-073, Sep. 1992. Accessed: Aug. 09, 2024. [Online]. Available: 
+    https://www.icsi.berkeley.edu/icsi/publication_details?n=778
+Version History:
+    - 0.0 [13 Aug 2024]: Initial version
+"""
+
+from src.main.hypergraph2 import Node, Edge, Hypergraph
 
 class Pathfinder:
+    """Object for finding the FD graph closure of a `Hypergraph`, as well as 
+    optimal paths through the hypergraph. Helpful for simulations.
+    """
+
     def __init__(self, hg: Hypergraph, source: list):
         """
         Finds the FD graph closure in the `Hypergraph` for the given source node(s).
@@ -29,6 +47,13 @@ class Pathfinder:
         self.reach(self.source, 0)
         self.findPaths()
 
+    def __str__(self):
+        out = '<Pathfinder object>\n'
+        out += f'Minimum distance from {self.source}:\n  '
+        ds = [f'{n}: {self.dist(n)}' for n in self.hg.simple_nodes]
+        out += '\n  '.join(ds)
+        return out
+
     def makeSourceSet(self, source_set: list)-> Node:
         """Makes a new simple node that points to each node in the `source_set`,
         and then makes this new node the source."""
@@ -38,6 +63,15 @@ class Pathfinder:
         return source_node
 
     def reach(self, node: Node, set_value: int=None, increment: bool=False):
+        """Helper method to retrieve or set the REACH variable, which indicates
+        whether or not the algorithm has found a viable path to the node. 
+        
+        Reach can have 3 different values, with the following meanings:
+            - 0: The node has been reached a viable path found.
+            - 1: The node has not been reached yet.
+            - >1: The node is a compound node, with the value indicating the 
+                number of parent nodes still to be reached.
+        """
         if set_value is None:
             return self.REACH[node.label]
         elif increment:
@@ -46,11 +80,16 @@ class Pathfinder:
             self.REACH[node.label] = set_value
     
     def dist(self, node: Node, set_value: float=None):
+        """Helper method to retrieve or set the DIST variable, which indicates
+        the minimum cost of traveling from the `source` node to the `node`."""
         if set_value is None: 
             return self.DIST[node.label]
         self.DIST[node.label] = set_value
     
     def last(self, node: Node, set_node: Node=None):
+        """Helper method to retrieve or set the LAST variable, which stores the
+        node in the FD chart that leads to the given node in the optimized path.
+        """
         if set_node == "None":
             self.LAST[node.label] = None
         elif set_node is None:
@@ -74,19 +113,24 @@ class Pathfinder:
                 self.p_queue[self.p_queue.index(el)] = (D, edge)
 
     def initializeData(self):
+        """Initializes the storage variables REACH, DIST, and LAST for use in 
+        computing the FD chart closure."""
         self.REACH = dict()
         self.DIST = dict()
         self.LAST = dict()
         for node in self.hg.simple_nodes:
             self.reach(node, 1)
-            self.dist(node, np.inf)
+            self.dist(node, float('inf'))
             self.last(node, "None")
         for node in self.hg.compnd_nodes:
             self.reach(node, len(node.dependencies))
-            self.dist(node, np.inf)
+            self.dist(node, float('inf'))
 
     def getMinQueueEl(self):
-        min_val = np.inf
+        """Returns the minimum element in the priority queue. If all edges from 
+        a node have been scanned, then the edge in this element is guaranteed to
+        lie on an optimized hyperpath."""
+        min_val = float('inf')
         min_edge = None
         for D, edge in self.p_queue:
             if D < min_val:
@@ -95,6 +139,8 @@ class Pathfinder:
         return min_val, min_edge
 
     def findPaths(self):
+        """Master algorithm for computing the distance from the `source` node to
+        all other nodes in the FD chart (if possible), known as the closure."""
         while len(self.p_queue) != 0:
             D, curr_edge = self.getMinQueueEl()
             s, t = curr_edge.source, curr_edge.target
@@ -111,6 +157,7 @@ class Pathfinder:
                         self.scan(z_edge)
 
     def scan(self, edge: Edge):
+        """Scans the given `edge` to see if it is a optimal edge to traverse."""
         w, t, x = edge.weight, edge.source, edge.target
         D = edge.weight + self.dist(t)
         if self.reach(x) == 1: #Unvisited
@@ -120,6 +167,8 @@ class Pathfinder:
             self.checkQueueToUpdate(D, edge)
 
     def getPath(self, node: Node):
+        """Returns a list of all nodes in the optimal path from the `source` to
+        the given `node`."""
         if self.reach(node) != 0:
             return None
         path = list()
@@ -139,10 +188,8 @@ class Pathfinder:
         return reversed
     
     def printPath(self, target: Node)-> str:
-        """
-        Prints the minimum hyperpath taken from the hypergraph closure from the 
-        source to the `target` node.
-        """
+        """ Prints the minimum hyperpath taken from the hypergraph closure from 
+        the source to the `target` node."""
         if isinstance(target, str):
             target = self.hg.getNode(target)
         path = self.getPath(target)
@@ -159,6 +206,7 @@ class Pathfinder:
         return out
 
     def printPathHelper(self, node: Node, out: list, width: int, row: int, col: int):
+        """Recursive helper method for the `printPath` method."""
         self.printNode(node, out, row, col, width)
         if node == self.source:
             return
@@ -176,6 +224,8 @@ class Pathfinder:
                 col += num_cols
         
     def printNode(self, node: Node, out: list, row: int, col: int, width: int):
+        """Helper function for printing `Node` labels with a specified formatting
+        and spacing. Called by `printPath`."""
         label = list(node.label[:width-2])
         if len(node.label) > width - 2:
             label[-1] = '-'
@@ -183,6 +233,8 @@ class Pathfinder:
         out[row][col] = f'{label: ^{width}}'
 
     def printLeader(self, out: list, row: int, col: int, width: int, isSlant: bool=False):
+        """Helper function for printing leaders (arrows) with a specified formatting
+        and spacing. Called by `printPath`."""
         leader = '↘' if isSlant else "↓"
         if isSlant:
             num_leading_spaces = (width - 1) // 2 - 1
@@ -193,6 +245,13 @@ class Pathfinder:
             out[row][col] = f'{leader: ^{width}}'
     
     def maxBranchLength(self, node: Node, num_rows: int=0):
+        """Returns the maximum length (number of nodes) in a branch of the 
+        hyperpath tree. A branch is number of nodes who, along their respective
+        edges, trace from the target `node` back to the `source`. 
+        
+        Note: Branches in the hyperpath tree occur at compound nodes. The length
+        of a branch includes the maximum length of all sub-branches.
+        """
         num_rows += 1
         if node == self.source:
             return num_rows
@@ -203,14 +262,6 @@ class Pathfinder:
             parents = node.dependencies
             sub_lengths = [self.maxBranchLength(p, num_rows) for p in parents]
             return max(sub_lengths)
-
-
-    def __str__(self):
-        out = '<Pathfinder object>\n'
-        out += f'Minimum distance from {self.source}:\n  '
-        ds = [f'{n}: {self.dist(n)}' for n in self.hg.simple_nodes]
-        out += '\n  '.join(ds)
-        return out
 
 if __name__ == '__main__':
     A, B, C, D = Node('A'), Node('B'), Node('C'), Node('D')
