@@ -5,7 +5,7 @@ from src.main.traversing import Pathfinder, Simulator
 def main():
     hg = Hypergraph()
     hg.addEdge(['A', 'B'], 'E', rel=plus_rel)
-    hg.addEdge(['C', 'D'], 'F', 20, rel=plus_rel)
+    hg.addEdge(['C', 'D'], 'F', rel=plus_rel)
     hg.addEdge(['B', 'C'], 'E', rel=plus_rel)
     hg.addEdge(['B', 'D'], 'F', rel=plus_rel)
     hg.addEdge(['E', 'F'], 'T', rel=plus_rel)

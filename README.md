@@ -1,64 +1,79 @@
 # ActionHypergraphs
-This repository enables usage of hypergraphs to define sand execute system models. **It is not a rigorous data storage solution. Do not use this as a database.** Note that this repo is under active development (no official release yet), therefore changes may occur rapidly. Fork the repository to create a more stable base if you want to try it. 
+This repository enables usage of hypergraphs to define sand execute system models. **It is not a rigorous data storage solution. Do not use this as a database.** Note that this repo is under active development (no official release yet), therefore changes may occur rapidly. Fork the repository to create a more stable base if you want to try it.
 
-## Getting started
-Let's build a basic action hypergraph of the following equations:
-- $A + B = C$
-- $A = -D$
-- $E = -B$
-- $D + E = F$  
-- $F = -C$
-
-First, import the classes. 
-```[python]
-from src.main.hypergraph import *
-from src.relationships.math_rel import *
-```
-
-Second, form the nodes using a builder function. Every node needs a string label:
-```[python]
-A, B, C, D, E, F = HyperNode.initMany(['A', 'B', 'C', 'D', 'E', 'F])
-```
-
-To make the hypergraph we'll need to compose the 5 edges (equations) given above:
-```[python]
-hg = HyperGraph()
-hg += HyperEdge([A, B], C, plus_rel)
-hg += HyperEdge(A, D, inverse_rel)
-hg += HyperEdge(E, B, inverse_rel)
-hg += HyperEdge([D, E], F, plus_rel)
-hg += HyperEdge(F, C, inverse_rel)
-```
-
-Now we can simulate it! Choose inputs, such as $A$ and $B$, and find a route to simulate $C$. 
-```[python]
-initial_conditions = dict(
-    A = 3,
-    B = 7,
-    E = -7,
-)
-hg.sim([A, B], C, initial_conditions, toPrint=True)
-hg.sim([A, E], C, initial_conditions, toPrint=True)
-```
-
-The output of the above should be:
-```
-Simulation:
-  plus: [A(3), B(7)] -> [C(10)]
-Simulation:
-  inverse: [A(3)] -> [D(-3)]
-  plus: [D(-3), E(-7)] -> [F(-10)]
-  inverse: [F(-10)] -> [C(10)]
-```
-
-Check out the  [demos](https://github.com/jmorris335/ActionHypergraphs/tree/main/src/demos) directory for more examples.
-
-## Introduction
+# Introduction
 Hypergraphs are normal graphs but without the constraint that edges must only link between two nodes. Because of this expanded generality, hypergraphs can be used to model more complex relationships. For instance, the relationship `A + B = C` is a multinodal relationship between three nodes, A, B, and C. You can think of all three nodes being linked by a 2D hyperedge, so that to move along that hyperedge you need at least two of three nodes. 
 
 An action hypergraph is a hypergraph where the relationships are executable actions that can be carried out by some execution engine, generally via API calls. The goal is for the hypergraph to be platform agnostic, while API calls allow for edges to be processed on any available software. (The demos use Python and numpy because it's easy and free). 
 
 Processing a series of nodes and edges (a "route") is what constitutes a simulation, so one of the uses of an actionable hypergraph is enabling high-level simulation ability from any possible entry point in a system model.
+
+## Getting started
+*Note that this demo is found in `src.demos.basic`*
+Let's build a basic action hypergraph of the following equations:
+- $A + B = C$
+- $A = -D$
+- $B = -E$
+- $D + E = F$  
+- $F = -C$
+
+First, import the classes. 
+```[python]
+from src.main.hypergraph import Hypergraph, Relationship
+```
+
+A hypergraph consists of edges that map between a set of nodes to a single node. We provide the mapping by creating a `Relationship` object (many of which are already defined in the `relationships` module). The two relationships defined in the governing equations are addition and negation. Each relationship is a wrapper around a method that takes in a list of values and returns a single value.
+```[python]
+negation_rel = Relationship('negate#rel', lambda source : -source[0])
+plus_rel = Relationship('plus#rel', lambda source : sum(source))
+```
+
+To make the hypergraph we'll need to compose the 5 edges (equations) given above and map them using the relationships we just made.
+```[python]
+hg = Hypergraph()
+hg.addEdge(['A', 'B'], C, plus_rel)
+hg.addEdge('A', 'D', inverse_rel)
+hg.addEdge('B', 'E', inverse_rel)
+hg.addEdge(['D', 'E'], 'F', plus_rel)
+hg.addEdge('F', 'C', inverse_rel)
+```
+
+Compute the closure of the hypergraph by picking a set of source nodes (inputs), such as $A$ and $B$ or $A$ and $E$. Notice how providing different inputs makes different parts of the hypergraph reachable.
+```[python]
+print("\n**Inputs A and B**")
+hg.solve(['A', 'B'], toPrint=True)
+print("\n**Inputs A and E**")
+hg.solve(['A', 'E'], toPrint=True)
+```
+
+Now we can simulate it! Set values for the inputs and the simulator will automatically calulate an optimized route to simulate $C$. 
+```[python]
+print("\n**Inputs A and B**")
+hg.simulate(input_values=dict(A=3, B=7), target='C', toPrint=True)
+print("\n**Inputs A and E**")
+hg.simulate(input_values=dict(A=3, E=-7), target='C', toPrint=True)
+```
+
+The last output of the above should be:
+```
+**Inputs A and E**
+   C                    
+   ↓                    
+   AB                   
+   ↓      ↘             
+   A       B            
+   ↓       ↓            
+ source    E            
+           ↓            
+         source         
+**Simulation**
+Inputs: A:3, E:-7
+Steps:
+  negate: [E:-7] -> B:7
+  plus: [A:3,B:7] -> C:10
+```
+
+Check out the  [demos](https://github.com/jmorris335/ActionHypergraphs/tree/main/src/demos) directory for more examples.
 
 ## Licensing and Usage
 Author: John Morris  
