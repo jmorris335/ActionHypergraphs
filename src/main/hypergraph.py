@@ -306,7 +306,7 @@ class Hypergraph:
         source node. Returns a `Pathfinder` object."""
         pf = Pathfinder(self, source)
         if toPrint:
-            print(self.pf)
+            print(pf)
         self.pathfinders.append(pf)
         return pf
     
