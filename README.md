@@ -32,10 +32,10 @@ To make the hypergraph we'll need to compose the 5 edges (equations) given above
 ```[python]
 hg = Hypergraph()
 hg.addEdge(['A', 'B'], C, plus_rel)
-hg.addEdge('A', 'D', inverse_rel)
-hg.addEdge('B', 'E', inverse_rel)
+hg.addEdge('A', 'D', negate_rel)
+hg.addEdge('B', 'E', negate_rel)
 hg.addEdge(['D', 'E'], 'F', plus_rel)
-hg.addEdge('F', 'C', inverse_rel)
+hg.addEdge('F', 'C', negate_rel)
 ```
 
 Compute the closure of the hypergraph by picking a set of source nodes (inputs), such as $A$ and $B$ or $A$ and $E$. Notice how providing different inputs makes different parts of the hypergraph reachable.

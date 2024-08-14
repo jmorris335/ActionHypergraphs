@@ -1,2 +1,2 @@
-from src.main.hypergraph_old import *
-from src.relationships.math_rel import *
+from actionhypergraph.src.core.hypergraph import Hypergraph, Relationship
+from actionhypergraph.src.relationships import math_rel

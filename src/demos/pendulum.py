@@ -1,12 +1,8 @@
-from src.main.hypergraph import Hypergraph
-from src.main.traversing import Pathfinder
-from src.relationships.math_rel import *
+from actionhypergraph.src.core.hypergraph import Hypergraph
+from actionhypergraph.src.relationships.math_rel import *
 
 def main():
     hg = makePendulumHG()
-
-    pf = Pathfinder(hg, ['omega', 'theta', 'g', 'r', 'c'])
-    print(pf.printPath('alpha'))
 
     delT = 0.05
     

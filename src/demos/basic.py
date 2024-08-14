@@ -1,4 +1,4 @@
-from src.main.hypergraph import Hypergraph, Relationship
+from actionhypergraph.src.core.hypergraph import Hypergraph, Relationship
 
 negation_rel = Relationship('negate#rel', lambda source : -source[0])
 plus_rel = Relationship('plus#rel', lambda source : sum(source))

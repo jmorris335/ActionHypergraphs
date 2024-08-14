@@ -1,5 +1,5 @@
-from src.main.hypergraph import *
-from src.main.traversing import Pathfinder, Simulator
+from src.core.hypergraph import *
+from src.core.traversing import Pathfinder, Simulator
 from src.relationships.math_rel import *
 
 def main():
