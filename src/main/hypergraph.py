@@ -8,6 +8,8 @@ Version History:
     - 0.0 [13 Aug 2024]: Initial version
 """
 
+import hashlib
+
 class Relationship:
     """A mapping between two sets, able to produce an output value given a set of
     inputs."""
@@ -84,6 +86,14 @@ class Node:
         if hasattr(o, 'label'):
             return o.label == self.label
         return False
+
+    def __ne__(self, o):
+        return not self.__eq__(o)
+    
+    def __hash__(self):
+        """Taken from https://stackoverflow.com/a/42089311/15496939"""
+        s = self.label
+        return int(hashlib.sha256(s.encode('utf-8')).hexdigest(), 16) % 10**8
     
     def __str__(self):
         return self.label
@@ -147,11 +157,15 @@ class Hypergraph:
         self.compnd_nodes = list()
         for node in nodes:
             self.addNode(node)
+        self.pathfinders = list()
 
     def __str__(self):
         out = "Hypergraph"
         out += '\n\t'.join([str(n) for n in self.getNodes()])
         return out
+    
+    def __call__(self, target, input_values, toPrint: bool=False):
+        return self.simulate(target, input_values, toPrint)
     
     def __iadd__(self, o):
         if isinstance(o, Node) or isinstance(o, str):
@@ -287,25 +301,41 @@ class Hypergraph:
         self.addNode(new_cmpnd_node)
         return new_cmpnd_node
     
-    def solve(self, source: list, toPrint: bool=True):
+    def solve(self, source: list, toPrint: bool=False):
         """Caller method that computes the closure of the FD chart for the given 
         source node. Returns a `Pathfinder` object."""
-        self.pf = Pathfinder(self, source)
+        pf = Pathfinder(self, source)
         if toPrint:
             print(self.pf)
-        return self.pf
+        self.pathfinders.append(pf)
+        return pf
+    
+    def findPathfinder(self, input_nodes: list):
+        """Finds the `Pathfinder` object that has computed closure of the same
+        input set. If none is found, then the method creates one and adds it to 
+        the hypergraph."""
+        out_pf = None
+        for pf in self.pathfinders:
+            if input_nodes == pf.source_set:
+                out_pf = pf
+                break
+        if out_pf is None:
+            out_pf = Pathfinder(self, input_nodes)
+            self.pathfinders.append(out_pf)
+        return out_pf
 
-    def simulate(self, input_values: dict, target: Node, toPrint: bool=False):
+    def simulate(self, target: Node, input_values: dict, toPrint: bool=False):
         """Caller method that simulates the value for the target node based on 
         the provided inputs. Returns a `Simulator` object."""
-        source_nodes = [self.getNode(l) for l in input_values.keys()]
-        if not hasattr(self, 'pf') or self.pf.source != source_nodes:
-            self.pf = Pathfinder(self, source_nodes)
-        self.sim = Simulator(self.pf, target, input_values)
+        input_nodes = [self.getNode(l) for l in input_values.keys()]
+        if None in input_nodes:
+            raise Exception("Input node not found in Hypergraph.")
+        sim_pf = self.findPathfinder(input_nodes)
+        out_val = sim_pf.simulate(target, input_values, toPrint)
         if toPrint:
-            print(self.pf.printPath(target))
-            print(self.sim)
-        return self.sim
+            print(sim_pf.printPath(target))
+            print(sim_pf.printSim(input_nodes))
+        return out_val
         
 class Pathfinder:
     """Object for finding the FD graph closure of a `Hypergraph`, as well as 
@@ -327,17 +357,7 @@ class Pathfinder:
             Can also be a singular `Node` or string with equivalent meaning.
         """
         self.hg = hg
-        if not isinstance(source, list):
-            source = [source]
-        for i, node in enumerate(source):
-            if isinstance(node, str):
-                source[i] = hg.getNode(node)
-        self.source = source[0] if len(source)==0 else self.makeSourceSet(source)
-
-        self.initializeData()
-        self.p_queue = [(0.0, Edge(self.source, self.source, 0.0))]
-        self.reach(self.source, 0)
-        self.findPaths()
+        self.findPaths(source)
 
     def __str__(self):
         out = '<Pathfinder object>\n'
@@ -345,6 +365,16 @@ class Pathfinder:
         ds = [f'{n}: {self.dist(n)}' for n in self.hg.simple_nodes]
         out += '\n  '.join(ds)
         return out
+    
+    def configureSource(self, source: list)-> Node:
+        """Takes in a variety of inputs and returns a singular source node."""
+        if not isinstance(source, list):
+            source = [source]
+        for i, node in enumerate(source):
+            if isinstance(node, str):
+                source[i] = self.hg.getNode(node)
+        self.source_set = source
+        self.source = source[0] if len(source)==0 else self.makeSourceSet(source)
 
     def makeSourceSet(self, source_set: list)-> Node:
         """Makes a new simple node that points to each node in the `source_set`,
@@ -433,9 +463,14 @@ class Pathfinder:
         self.p_queue.remove((min_val, min_edge))
         return min_val, min_edge
 
-    def findPaths(self):
+    def findPaths(self, source: list):
         """Master algorithm for computing the distance from the `source` node to
         all other nodes in the FD chart (if possible), known as the closure."""
+        self.configureSource(source)
+        self.initializeData()
+        self.p_queue = [(0.0, Edge(self.source, self.source, 0.0))]
+        self.reach(self.source, 0)
+
         while len(self.p_queue) != 0:
             D, curr_edge = self.getMinQueueEl()
             s, t = curr_edge.source, curr_edge.target
@@ -580,29 +615,31 @@ class Pathfinder:
             parents = node.dependencies
             sub_lengths = [self.maxBranchLength(p, num_rows) for p in parents]
             return max(sub_lengths)
+        
+    def simulate(self, target: Node, input_values: dict, toPrint: bool=False):
+        """Passes the input values through the series of relationships defined
+        by the class path to the `target`. Returns the found value for `target`.
+        """
+        self.sim_str = list()
+        input_nodes = [self.hg.getNode(label) for label in input_values.keys()]
+        if any([bool(self.dist(node)) for node in input_nodes]):
+            self.configureSource(input_nodes)
+            self.findPaths(input_nodes)
 
-class Simulator:
-    def __init__(self, pf: Pathfinder, target: Node, input_values: dict):
-        self.pf = pf
-        self.out_str = list()
-        self.simulate(target, input_values)
+        if isinstance(target, str):
+            target = self.hg.getNode(target)
 
-    def simulate(self, target: Node, input_values: dict, input_nodes: list=None):
-        if isinstance(target, str):
-            target = self.pf.hg.getNode(target)
-        self.target = target
-        self.pf.hg.setNodeValues(input_values, input_nodes)
-        if input_nodes is None:
-            input_nodes = [self.pf.hg.getNode(label) for label in input_values.keys()]
-        self.input_nodes = input_nodes
-        if isinstance(target, str):
-            target = self.pf.hg.getNode(target)
-        return self.simulationHelper(target, input_nodes)
+        self.hg.setNodeValues(input_values)
+        out_val =  self.simulationHelper(target, input_nodes)
+        if toPrint:
+            self.printSim(input_nodes)
+        return out_val
     
     def simulationHelper(self, node, inputs: list):
+        """Recursive helper for `simulate` method."""
         if node in inputs:
             return node.value
-        edge = self.pf.last(node, get_edge=True)
+        edge = self.last(node, get_edge=True)
         rel, source = edge.rel, edge.source
         if source.isSimple():
             val = rel(self.simulationHelper(source, inputs))
@@ -610,19 +647,18 @@ class Simulator:
             values = [self.simulationHelper(parent, inputs) for parent in source.dependencies]
             val = edge.rel(values)
         node.value = val
-        self.out_str.append(str(edge))
+        self.sim_str.append(str(edge))
         return val
     
-    def printSimTree(self)-> str:
-        return self.pf.printPath(self.target, withValue=True)
-    
-    def __str__(self):
-        nodes = self.pf.getPath(self.target)
-        input_str = ', '.join([f'{n.label}:{n.value}' for n in self.input_nodes])
+    def printSim(self, input_nodes):
+        """Prints the simulation results (based on the value of `self.sim_str`).
+        """
+        if len(self.sim_str) == 0:
+            return 'No simulation found'
+        input_str = ', '.join([f'{n.label}:{n.value}' for n in input_nodes])
         out = '**Simulation**\n'
         out += 'Inputs: ' + input_str + '\n'
         out += 'Steps:\n  '
-        out += '\n  '.join(self.out_str)
+        out += '\n  '.join(self.sim_str)
         return out
-    
     
