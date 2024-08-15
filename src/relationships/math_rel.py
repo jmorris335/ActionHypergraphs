@@ -1,18 +1,12 @@
 import numpy as np
 
-from actionhypergraph.src.core.hypergraph import Relationship
+from actionhypergraph import Relationship
 
-class RelMethods:
+class MathRelMethods:
     def product(values):
         out = 1.0
         for x in values:
             out *= x
-        return out
-    
-    def division(values):
-        out = values[0]
-        for x in values[1:]:
-            out /= x
         return out
     
 ## Basic Operations
@@ -39,7 +33,7 @@ round_rel = Relationship('round#rel', lambda values : np.round(values[0], 0))
 plus_rel = Relationship('plus#rel', lambda values: sum(values))
 """Returns the sum of all inputs."""
 
-mult_rel = Relationship('product#rel', RelMethods.product)
+mult_rel = Relationship('product#rel', MathRelMethods.product)
 """Returns the chain multiplication of all inputs."""
 
 ## Trigonometry
