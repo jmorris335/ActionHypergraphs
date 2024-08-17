@@ -36,6 +36,27 @@ plus_rel = Relationship('plus#rel', lambda values: sum(values))
 mult_rel = Relationship('product#rel', MathRelMethods.product)
 """Returns the chain multiplication of all inputs."""
 
+## Comparison
+max_rel = Relationship('max#rel', lambda values : max(values))
+"""Returns the maximum input value."""
+
+min_rel = Relationship('min#rel', lambda values : min(values))
+"""Returns the minimum input value."""
+
+## Booleans
+equivalent_rel = Relationship('equivalent#rel', lambda values : 
+                           all([a == values[0] for a in values[1:]]))
+"""Returns True if the all input values are equivalent."""
+
+or_rel = Relationship('or#rel', lambda values : any(values))
+"""Returns True if any of the input values are True."""
+
+and_rel = Relationship('and#rel', lambda values : all(values))
+"""Returns True if all of the input values are True."""
+
+xor_rel = Relationship('xor#rel', lambda values: len([val for val in values if val]) == 1)
+"""Returns True if one and only one input value is True."""
+
 ## Trigonometry
 sin_rel = Relationship('sin#rel', lambda values: np.sin(values[0]))
 """Returns the sine of the first input."""
@@ -45,3 +66,6 @@ cos_rel = Relationship('cos#rel', lambda values : np.cos(values[0]))
 
 tan_rel = Relationship('tan#rel', lambda values : np.tan(values[0]))
 """Returns the tangent of the first input."""
+
+## Set Operations
+union_rel = Relationship('union#rel', lambda values : [val[:] for val in values])

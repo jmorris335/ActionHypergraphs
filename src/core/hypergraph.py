@@ -25,11 +25,11 @@ class Relationship:
             The value to return from the source set of `Node` objects. The mapping
             method takes a list as its input and returns a single value (often 
             set to the value of an output `Node`). The default option is to 
-            return the input value, the "equivalent" relationship.
+            return the input value, the "equal" relationship.
         """
         self.label = label
         if mapping is None:
-            self.label = "equivalent#rel"
+            self.label = "equal#rel"
             self.mapping = lambda l: l[0]
         self.mapping = mapping
 
